@@ -1,0 +1,25 @@
+GERADOR DE DASHBOARDS FISCAIS – VERSÃO SITE (sem login)
+=========================================================
+
+Esta pasta é um site estático: qualquer pessoa que abrir o endereço pode usar, sem conta e sem
+instalar nada. O relatório SAP é processado no navegador de quem usa (nada é enviado ao servidor).
+
+Importante: não funciona abrindo o index.html com dois cliques (file://). Precisa estar publicado
+em um endereço http(s). Opções:
+
+1) GitHub Pages (gratuito, endereço público)
+   - Crie um repositório público no GitHub e envie TODO o conteúdo desta pasta
+     (index.html, worker.js, app.zip.wasm, a pasta pyodide e os demais arquivos).
+     Pelo site do GitHub: "Add file" > "Upload files" (arraste os arquivos e a pasta pyodide).
+   - Settings > Pages > Source: "Deploy from a branch", branch "main", pasta "/ (root)".
+   - Em 1 a 2 minutos o endereço https://<usuario>.github.io/<repositorio>/ fica disponível.
+
+2) Servidor da empresa (intranet)
+   - Copie a pasta para qualquer servidor web (IIS, Apache, nginx).
+   - No IIS, o arquivo web.config já registra os tipos .wasm e .mjs.
+
+3) Outros serviços de site estático (Netlify, Cloudflare Pages, Azure Static Web Apps):
+   - Publique a pasta inteira; não há configuração adicional.
+
+Requisitos de quem usa: Chrome ou Edge atualizado e cerca de 2 GB de memória livre.
+Tempo típico: 3 a 5 minutos para ~47 mil linhas. A primeira abertura baixa ~22 MB (o Python).
