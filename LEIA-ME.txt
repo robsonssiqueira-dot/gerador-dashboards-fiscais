@@ -21,5 +21,9 @@ em um endereço http(s). Opções:
 3) Outros serviços de site estático (Netlify, Cloudflare Pages, Azure Static Web Apps):
    - Publique a pasta inteira; não há configuração adicional.
 
+Crédito outorgado de ICMS (art. 36 do Anexo III do RICMS/SP): informe na página o CNPJ do
+estabelecimento fabricante; em branco, vale para os estabelecimentos de SP com vendas de produção
+própria dos NCM do benefício (pá carregadeira, escavadeira hidráulica e retroescavadeira).
+
 Requisitos de quem usa: Chrome ou Edge atualizado e cerca de 2 GB de memória livre.
 Tempo típico: 3 a 5 minutos para ~47 mil linhas. A primeira abertura baixa ~22 MB (o Python).

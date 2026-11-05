@@ -46,6 +46,7 @@ label.fld{display:grid;gap:4px;font-size:13px;color:var(--muted);flex:1 1 220px;
 input[type=text]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
 .chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;flex:1 1 320px}
 .chk input{margin-top:4px}
+label.fld small{font-size:12px;color:var(--muted)}
 .chk span small{display:block;color:var(--muted);font-size:12.5px}
 button{font:600 15px/1 var(--f-body);border-radius:8px;border:1px solid transparent;padding:12px 18px;cursor:pointer}
 button.primary{background:var(--accent);color:var(--accent-ink)}
@@ -111,6 +112,12 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
           <span>Incluir a aba original do relatório na pasta<small>Recomendado (preserva os dados de origem). Desmarque se o computador tiver pouca memória: o arquivo fica menor e a geração mais rápida.</small></span>
         </label>
       </div>
+      <div class="row">
+        <label class="fld" for="cnpj36">CNPJ do fabricante para o crédito outorgado de ICMS (art. 36 do Anexo III do RICMS/SP)
+          <input id="cnpj36" type="text" inputmode="numeric" value="" placeholder="Vazio = estabelecimentos de SP pela regra do programa" autocomplete="off" aria-describedby="cnpj36msg">
+          <small id="cnpj36msg">Vendas de pá carregadeira, escavadeira hidráulica e retroescavadeira produzidas no estabelecimento · carga final de 5%.</small>
+        </label>
+      </div>
 
       <div class="actions"><button id="gerar" class="primary" disabled>Gerar pasta de dashboards</button></div>
 
@@ -118,7 +125,7 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
       <div class="status"><h2 style="margin-right:auto">Andamento</h2><time id="tempo">00:00</time></div>
       <ol class="steps" id="steps">
         <li data-n="1">Ler o relatório<time></time></li>
-        <li data-n="2">Tratar a base, CFOP, monofásicos e pendências P01–P22<time></time></li>
+        <li data-n="2">Tratar a base, CFOP, monofásicos, crédito outorgado e pendências<time></time></li>
         <li data-n="3">Calcular alertas, síntese e premissas<time></time></li>
         <li data-n="4">Conferência independente<time></time></li>
         <li data-n="5">Montar a pasta (fórmulas, tabelas, gráficos)<time></time></li>
@@ -149,6 +156,7 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
         <li>Creditos_Fornecedores · Debitos_Clientes <span>· rankings, ABC, UF, CFOP, CST</span></li>
         <li>Operacoes_Capital_Giro <span>· matriz de CFOP e posição na movimentação</span></li>
         <li>Monofasicos_PIS_COFINS <span>· crédito na compra e alíquota na venda</span></li>
+        <li>Credito_Outorgado_ICMS <span>· art. 36 do Anexo III do RICMS/SP (máquinas)</span></li>
         <li>Alertas_Oportunidades · Sintese_Executiva</li>
         <li>Controles_Conciliacao · Dicionario_Premissas</li>
         <li>TD_Detalhamento <span>· tabelas dinâmicas até o documento</span></li>
@@ -168,6 +176,10 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
   let arquivo = null, pronto = false, worker = null, t0 = 0, timer = null, ultimo = null, passoAtual = 0, passoT0 = 0;
   try { const e = localStorage.getItem('empresa'); if (e !== null) $('empresa').value = e; } catch (_) {}
   try { const o = localStorage.getItem('original'); if (o !== null) $('original').checked = o === '1'; } catch (_) {}
+  try { const c = localStorage.getItem('cnpj36'); if (c !== null) $('cnpj36').value = c; } catch (_) {}
+  $('cnpj36').addEventListener('change', () => { try { localStorage.setItem('cnpj36', $('cnpj36').value); } catch (_) {} });
+  const cnpjDig = () => $('cnpj36').value.replace(/\D/g, '');
+  const brl = (x) => 'R$ ' + Math.round(x).toLocaleString('pt-BR');
   $('empresa').addEventListener('change', () => { try { localStorage.setItem('empresa', $('empresa').value); } catch (_) {} });
   $('original').addEventListener('change', () => { try { localStorage.setItem('original', $('original').checked ? '1' : '0'); } catch (_) {} });
 
@@ -223,7 +235,9 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
 
   function mostraResultado(r) {
     const kp = [['Período', r.periodo], ['Linhas', r.linhas.toLocaleString('pt-BR')], ['Documentos', r.docs.toLocaleString('pt-BR')],
-                ['Estabelecimentos', r.estabs], ['Alertas', r.alertas.length], ['Tamanho', (ultimo.xlsx.size / 1048576).toFixed(1).replace('.', ',') + ' MB']];
+                ['Estabelecimentos', r.estabs], ['Alertas', r.alertas.length],
+                ['Crédito outorgado art. 36 (calculado)', r.co36 && r.co36.n ? brl(r.co36.liq) : 'Sem vendas elegíveis'],
+                ['Tamanho', (ultimo.xlsx.size / 1048576).toFixed(1).replace('.', ',') + ' MB']];
     $('kpis').replaceChildren(...kp.map(([k, v]) => { const d = document.createElement('div'); d.className = 'kpi'; const b = document.createElement('b'); b.textContent = v; const s = document.createElement('span'); s.textContent = k; d.append(b, s); return d; }));
     const at = $('atencao'); at.replaceChildren();
     if (r.atencao.length) {
@@ -287,6 +301,8 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
 
   btn.addEventListener('click', async () => {
     if (!arquivo || !pronto) return;
+    const cn = cnpjDig();
+    if (cn && cn.length !== 14) { $('cnpj36msg').textContent = 'Informe os 14 dígitos do CNPJ ou deixe em branco.'; $('cnpj36').focus(); return; }
     btn.disabled = true; pronto = false; drop.style.pointerEvents = 'none';
     $('resultado').hidden = true; $('erro').hidden = true; ultimo = null;
     [...$('steps').children].forEach((li) => { li.className = ''; li.querySelector('time').textContent = ''; });
@@ -294,7 +310,7 @@ aside p,.note{margin:0;font-size:13px;color:var(--muted)}
     t0 = performance.now(); timer = setInterval(() => { $('tempo').textContent = fmtT((performance.now() - t0) / 1000); }, 500);
     setEnv('busy', 'Gerando', 'Deixe esta aba aberta até terminar.');
     const buf = await arquivo.arrayBuffer();
-    worker.postMessage({ type: 'run', file: buf, name: arquivo.name, empresa: $('empresa').value.trim(), semOriginal: !$('original').checked }, [buf]);
+    worker.postMessage({ type: 'run', file: buf, name: arquivo.name, empresa: $('empresa').value.trim(), cnpj36: cn, semOriginal: !$('original').checked }, [buf]);
   });
 
   novoWorker();

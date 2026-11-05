@@ -32,12 +32,13 @@ a = ARGS.to_py() if hasattr(ARGS, 'to_py') else dict(ARGS)
 def _log(m):
     js_log(str(m))
 try:
-    CTX = gerar(a['entrada'], a['saida'], empresa=a['empresa'], log=_log, flags_pos=a['flags'])
+    CTX = gerar(a['entrada'], a['saida'], empresa=a['empresa'], log=_log, flags_pos=a['flags'], cnpj_outorgado=a.get('cnpj36', ''))
     st = CTX['static']; b = CTX['b']
     res = {'ok': True, 'saida': CTX['saida'], 'txt': CTX['arquivo_conferencia'], 'periodo': CTX['periodo']['rotulo'],
            'linhas': int(len(b)), 'docs': int(b.DocSAP.nunique()), 'estabs': int(len(CTX['aux']['estab'])),
            'alertas': [[x['id'], x['prioridade'], x['achado']] for x in st['alertas']],
-           'atencao': [[c['res'], c['item'], c.get('det', '')] for c in CTX['conferencia'] if c['res'] != 'OK']}
+           'atencao': [[c['res'], c['item'], c.get('det', '')] for c in CTX['conferencia'] if c['res'] != 'OK'],
+           'co36': {'n': st['co36']['n'], 'cred': st['co36']['cred'], 'est': st['co36']['est'], 'liq': st['co36']['cred'] + st['co36']['est'], 'estab': st['co36']['estab']}}
     del CTX, st, b
 except ErroLayout as e:
     res = {'ok': False, 'tipo': 'layout', 'erro': str(e)}
@@ -63,7 +64,7 @@ self.onmessage = async (e) => {
       const ent = '/tmp/in/' + nome, sai = '/tmp/out/' + baseNome + '_Dashboards_Fiscais.xlsx';
       py.FS.writeFile(ent, new Uint8Array(m.file));
       py.globals.set('js_log', (s) => post('log', { msg: s }));
-      py.globals.set('ARGS', py.toPy({ entrada: ent, saida: sai, empresa: m.empresa || '', flags: m.semOriginal ? ['--no-sheet1'] : [] }));
+      py.globals.set('ARGS', py.toPy({ entrada: ent, saida: sai, empresa: m.empresa || '', cnpj36: m.cnpj36 || '', flags: m.semOriginal ? ['--no-sheet1'] : [] }));
       const res = JSON.parse(py.runPython(RUN));
       try { py.FS.unlink(ent); } catch (_) {}
       if (!res.ok) { post('falha', { res }); return; }
